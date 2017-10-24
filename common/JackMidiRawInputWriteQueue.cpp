@@ -30,8 +30,7 @@ JackMidiRawInputWriteQueue::
 JackMidiRawInputWriteQueue(JackMidiWriteQueue *write_queue,
                            size_t max_packet_data, size_t max_packets)
 {
-    packet_queue = new JackMidiAsyncQueue(max_packet_data, max_packets);
-    std::auto_ptr<JackMidiAsyncQueue> packet_queue_ptr(packet_queue);
+    auto packet_queue_ptr = std::make_unique<JackMidiAsyncQueue>(max_packet_data, max_packets);
     input_buffer = new jack_midi_data_t[max_packet_data];
     Clear();
     expected_bytes = 0;
@@ -40,7 +39,7 @@ JackMidiRawInputWriteQueue(JackMidiWriteQueue *write_queue,
     packet = 0;
     status_byte = 0;
     this->write_queue = write_queue;
-    packet_queue_ptr.release();
+    packet_queue = packet_queue_ptr.release();
 }
 
 JackMidiRawInputWriteQueue::~JackMidiRawInputWriteQueue()

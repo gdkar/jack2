@@ -28,14 +28,12 @@ using Jack::JackFFADOMidiInputPort;
 JackFFADOMidiInputPort::JackFFADOMidiInputPort(size_t max_bytes)
 {
     event = 0;
-    receive_queue = new JackFFADOMidiReceiveQueue();
-    std::auto_ptr<JackFFADOMidiReceiveQueue> receive_queue_ptr(receive_queue);
-    write_queue = new JackMidiBufferWriteQueue();
-    std::auto_ptr<JackMidiBufferWriteQueue> write_queue_ptr(write_queue);
-    raw_queue = new JackMidiRawInputWriteQueue(write_queue, max_bytes,
+    auto receive_ptr = std::make_unique<JackFFADOMidiReceiveQueue>();
+    auto write_ptr = std::make_unique<JackMidiBufferWriteQueue>();
+    raw_queue = new JackMidiRawInputWriteQueue(write_ptr.get(), max_bytes,
                                                max_bytes);
-    write_queue_ptr.release();
-    receive_queue_ptr.release();
+    write_queue = write_ptr.release();
+    receive_queue = receive_ptr.release();
 }
 
 JackFFADOMidiInputPort::~JackFFADOMidiInputPort()
