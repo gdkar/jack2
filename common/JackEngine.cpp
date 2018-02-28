@@ -218,12 +218,12 @@ void JackEngine::CheckXRun(jack_time_t callback_usecs)  // REVOIR les conditions
             jack_time_t finished_date = timing->fFinishedAt;
 
             if (status != NotTriggered && status != Finished) {
-                jack_error("JackEngine::XRun: client = %s was not finished, state = %s", client->GetClientControl()->fName, State2String(status));
+//                jack_error("JackEngine::XRun: client = %s was not finished, state = %s", client->GetClientControl()->fName, State2String(status));
                 fChannel.Notify(ALL_CLIENTS, kXRunCallback, 0);  // Notify all clients
             }
 
             if (status == Finished && (long)(finished_date - callback_usecs) > 0) {
-                jack_error("JackEngine::XRun: client %s finished after current callback", client->GetClientControl()->fName);
+//                jack_error("JackEngine::XRun: client %s finished after current callback", client->GetClientControl()->fName);
                 fChannel.Notify(ALL_CLIENTS, kXRunCallback, 0);  // Notify all clients
             }
         }
@@ -1039,13 +1039,17 @@ int JackEngine::PortDisconnect(int refnum, jack_port_id_t src, jack_port_id_t ds
 int JackEngine::PortRename(int refnum, jack_port_id_t port, const char* name)
 {
     char old_name[REAL_JACK_PORT_NAME_SIZE+1] = { 0, };
-    strcpy(old_name, fGraphManager->GetPort(port)->GetName());
     JackPort *old_port = fGraphManager->GetPort(port);
-    if(!((unsigned long)old_port->GetFlags() & ((unsigned long)JackPortIsPhysical))) {
+    if(!old_port)
+        return -1;
+    strcpy(old_name, old_port->GetName());
+    if(old_port && !((unsigned long)old_port->GetFlags() & ((unsigned long)JackPortIsPhysical))) {
         old_port->SetName(name);
         NotifyPortRename(port, old_name);
+        return 0;
+    } else {
+        return -1;
     }
-    return 0;
 }
 
 //--------------------

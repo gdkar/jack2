@@ -26,34 +26,34 @@
 
 #define VERSION "1.9.12"
 
-#define BUFFER_SIZE_MAX 8192
+#define BUFFER_SIZE_MAX (8192)
 
-#define JACK_PORT_NAME_SIZE 256
-#define JACK_PORT_TYPE_SIZE 32
+#define JACK_PORT_NAME_SIZE (256)
+#define JACK_PORT_TYPE_SIZE (32)
 
-#define JACK_SERVER_NAME_SIZE 256
-#define JACK_CLIENT_NAME_SIZE 64
-#define JACK_MESSAGE_SIZE 256
-#define JACK_UUID_SIZE 36 // to match jack1 and uuid.h
+#define JACK_SERVER_NAME_SIZE (256)
+#define JACK_CLIENT_NAME_SIZE (64)
+#define JACK_MESSAGE_SIZE (256)
+#define JACK_UUID_SIZE (36) // to match jack1 and uuid.h
 #define JACK_UUID_STRING_SIZE (JACK_UUID_SIZE+1) /* includes trailing null */
-#define JACK_SESSION_COMMAND_SIZE 256
+#define JACK_SESSION_COMMAND_SIZE (256)
 
-#define SYNC_MAX_NAME_SIZE 256
+#define SYNC_MAX_NAME_SIZE (256)
 
-#define REAL_JACK_PORT_NAME_SIZE JACK_CLIENT_NAME_SIZE + JACK_PORT_NAME_SIZE   // full name like "client_name:short_port_name"
+#define REAL_JACK_PORT_NAME_SIZE (JACK_CLIENT_NAME_SIZE + JACK_PORT_NAME_SIZE)   // full name like "client_name:short_port_name"
 
 #ifndef PORT_NUM
-#define PORT_NUM 2048
+#define PORT_NUM (2048)
 #endif
 
 #ifndef PORT_NUM_MAX
-#define PORT_NUM_MAX 4096           // The "max" value for ports used in connection manager, although port number in graph manager is dynamic
+#define PORT_NUM_MAX (4096)           // The "max" value for ports used in connection manager, although port number in graph manager is dynamic)
 #endif
 
-#define DRIVER_PORT_NUM 256
+#define DRIVER_PORT_NUM (256)
 
 #ifndef PORT_NUM_FOR_CLIENT
-#define PORT_NUM_FOR_CLIENT 768
+#define PORT_NUM_FOR_CLIENT (768)
 #endif
 
 #define FIRST_AVAILABLE_PORT 1
