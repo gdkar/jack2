@@ -347,7 +347,7 @@ namespace Jack
     {
         jack_log("JackProxyDriver::AllocPorts fBufferSize = %ld fSampleRate = %ld", fEngineControl->fBufferSize, fEngineControl->fSampleRate);
 
-        char proxy[REAL_JACK_PORT_NAME_SIZE];
+        char proxy[REAL_JACK_PORT_NAME_SIZE+1] = {0,};
         int i;
 
         fUpstreamPlaybackPorts = new jack_port_t* [fCaptureChannels];

@@ -677,12 +677,12 @@ int JackClient::PortRegister(const char* port_name, const char* port_type, unsig
 
     // Check port name length
     string port_full_name_str = string(GetClientControl()->fName) + string(":") + port_short_name_str;
-    if (port_full_name_str.size() >= REAL_JACK_PORT_NAME_SIZE) {
+    if (port_full_name_str.size() > REAL_JACK_PORT_NAME_SIZE) {
         jack_error("\"%s:%s\" is too long to be used as a JACK port name.\n"
                    "Please use %lu characters or less",
                    GetClientControl()->fName,
                    port_name,
-                   JACK_PORT_NAME_SIZE - 1);
+                   JACK_PORT_NAME_SIZE);
         return 0; // Means failure here...
     }
 
@@ -718,13 +718,13 @@ int JackClient::PortUnRegister(jack_port_id_t port_index)
 int JackClient::PortConnect(const char* src, const char* dst)
 {
     jack_log("JackClient::Connect src = %s dst = %s", src, dst);
-    if (strlen(src) >= REAL_JACK_PORT_NAME_SIZE) {
+    if (strlen(src) > REAL_JACK_PORT_NAME_SIZE) {
         jack_error("\"%s\" is too long to be used as a JACK port name.\n", src);
-        return -1; 
+        return -1;
     }
-    if (strlen(dst) >= REAL_JACK_PORT_NAME_SIZE) {
+    if (strlen(dst) > REAL_JACK_PORT_NAME_SIZE) {
         jack_error("\"%s\" is too long to be used as a JACK port name.\n", dst);
-        return -1; 
+        return -1;
     }
     int result = -1;
     fChannel->PortConnect(GetClientControl()->fRefNum, src, dst, &result);
@@ -734,11 +734,11 @@ int JackClient::PortConnect(const char* src, const char* dst)
 int JackClient::PortDisconnect(const char* src, const char* dst)
 {
     jack_log("JackClient::Disconnect src = %s dst = %s", src, dst);
-    if (strlen(src) >= REAL_JACK_PORT_NAME_SIZE) {
+    if (strlen(src) > REAL_JACK_PORT_NAME_SIZE) {
         jack_error("\"%s\" is too long to be used as a JACK port name.\n", src);
-        return -1; 
+        return -1;
     }
-    if (strlen(dst) >= REAL_JACK_PORT_NAME_SIZE) {
+    if (strlen(dst) > REAL_JACK_PORT_NAME_SIZE) {
         jack_error("\"%s\" is too long to be used as a JACK port name.\n", dst);
         return -1; 
     }
