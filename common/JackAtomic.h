@@ -51,7 +51,7 @@ static inline SInt32 DEC_ATOMIC(AtomicSInt32 *val)
 {
     return std::atomic_fetch_add(val, -1);
 }
-#elif !defined(__cplusplus) && define(HAVE_STDATOMIC_H) && HAVE_STDATOMIC_H
+#elif !defined(__cplusplus) && defined(HAVE_STDATOMIC_H) && HAVE_STDATOMIC_H
 #ifndef _Atomic
 #define _Atomic(x) volatile x
 #endif
