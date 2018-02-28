@@ -37,6 +37,7 @@
 #include <jack/jack.h>
 #include <jack/intclient.h>
 #include <jack/transport.h>
+#include <atomic>
 
 
 #if defined(WIN32) && !defined(M_PI)
@@ -85,17 +86,18 @@ int t_error = 0;
 int reorder = 0;	// graph reorder callback
 int RT = 0;			// is real time or not...
 int FW = 0;			// freewheel mode
-int init_clbk = 0;	// init callback
-int port_rename_clbk = 0;	// portrename callback
+std::atomic<int> init_clbk{0};	// init callback
+std::atomic<int> port_rename_clbk{0};	// portrename callback
 int i, j, k = 0;
 int port_callback_reg = 0;
-jack_nframes_t cur_buffer_size, old_buffer_size, cur_pos;
-int activated = 0;
-int count1, count2 = 0;			// for freewheel
-int xrun = 0;
+std::atomic<jack_nframes_t> cur_buffer_size, old_buffer_size, cur_pos;
+std::atomic<int> activated {0};
+std::atomic<int> count1{0};
+std::atomic<int> count2{0};	// for freewheel
+std::atomic<int> xrun {0};
 int have_xrun = 0;				// msg to tell the process1 function to write a special thing in the frametime file.
-int process1_activated = -1;	// to control processing...
-int process2_activated = -1;	// to control processing...
+std::atomic<int> process1_activated { -1};	// to control processing...
+std::atomic<int> process2_activated { -1};	// to control processing...
 unsigned long int index1 = 0;
 unsigned long int index2 = 0;
 jack_default_audio_sample_t *signal1;	// signal source d'emission
@@ -109,8 +111,8 @@ int transport_mode = 1;
 jack_nframes_t input_ext_latency = 0;	// test latency for PHY devices
 jack_nframes_t output_ext_latency = 0;	// test latency for PHY devices
 
-int sync_called = 0;
-int starting_state = 1;
+std::atomic<int> sync_called {0};
+std::atomic<int> starting_state {1};
 
 int linecount = 0;		// line counter for log file of sampleframe counter --> for graph function.
 int linebuf = 0;		// reminders for graph analysis
@@ -119,7 +121,7 @@ int linefw = 0;
 int lineports = 0;
 int linecl2 = 0;
 
-int client_register = 0;
+std::atomic<int> client_register {0};
 
 /**
 *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -195,7 +197,7 @@ void Jack_Port_Rename_Callback(jack_port_id_t port, const char* old_name, const 
 int Jack_Update_Buffer_Size(jack_nframes_t nframes, void *arg)
 {
     cur_buffer_size = jack_get_buffer_size(client1);
-    Log("Buffer size = %d (msg from callback)\n", cur_buffer_size);
+    Log("Buffer size = %d (msg from callback)\n", cur_buffer_size.load());
     return 0;
 }
 
@@ -306,7 +308,7 @@ int process1(jack_nframes_t nframes, void *arg)
     if (FW == 0) {
         Collect(&perpetualcollect);
         if (have_xrun) {
-            fprintf(file, "%i	%i\n", (perpetualcollect.ft - lastperpetualcollect.ft), (2*cur_buffer_size));
+            fprintf(file, "%i	%i\n", (perpetualcollect.ft - lastperpetualcollect.ft), (2*cur_buffer_size.load()));
             have_xrun = 0;
         } else {
             fprintf(file, "%i	0\n", (perpetualcollect.ft - lastperpetualcollect.ft));
@@ -479,8 +481,8 @@ int process4(jack_nframes_t nframes, void *arg)
 	jack_nframes_t delta_time = cur_time - last_time;
 
 	Log("calling process4 callback : jack_frame_time = %ld delta_time = %ld\n", cur_time, delta_time);
-	if (delta_time > 0  && abs((int64_t)delta_time - (int64_t)cur_buffer_size) > (int64_t)tolerance) {
-		printf("!!! ERROR !!! jack_frame_time seems to return incorrect values cur_buffer_size = %d, delta_time = %d tolerance %d\n", cur_buffer_size, delta_time, tolerance);
+	if (delta_time > 0  && abs((int64_t)delta_time - (int64_t)cur_buffer_size.load()) > (int64_t)tolerance) {
+		printf("!!! ERROR !!! jack_frame_time seems to return incorrect values cur_buffer_size = %d, delta_time = %d tolerance %d\n", cur_buffer_size.load(), delta_time, tolerance);
 	}
 
 	last_time = cur_time;
@@ -747,7 +749,7 @@ int main (int argc, char *argv[])
      * try to register a client with maximum possible client name size
      *
      */
-    char client_name3[jack_client_name_size()];
+    char client_name3[jack_client_name_size()] = {0,};
     // "jack_client_name_size" - 1 effective characters
     for (int i = 0; i < jack_client_name_size() - 1; i++) {
         client_name3[i] = 'A';
@@ -845,7 +847,7 @@ int main (int argc, char *argv[])
      *
      */
     cur_buffer_size = jack_get_buffer_size(client1);
-    sprintf (filename, "framefile-%i.dat", cur_buffer_size);
+    sprintf (filename, "framefile-%i.dat", cur_buffer_size.load());
     file = fopen(filename, "w");
     if (file == NULL) {
         fprintf(stderr, "Error when opening framefile.dat log file");
@@ -1011,13 +1013,13 @@ int main (int argc, char *argv[])
     t_error = 0;
     activated = 0;
     jack_sleep(1 * 1000);
-    count1 = activated;
+    count1 = activated.load();
     Log("Testing activation freewheel mode...\n");
     linefw = linecount; // count for better graph reading with gnuplot
     jack_set_freewheel(client1, 1);
     activated = 0;
     jack_sleep(1 * 1000);
-    count2 = activated;
+    count2 = activated.load();
     if (jack_is_realtime(client1) == 0) {
         t_error = 0;
     } else {
@@ -1043,7 +1045,7 @@ int main (int argc, char *argv[])
         Log("Audio Callback in 'standard' (non-freewheel) mode seems not to be called...\n");
         Log("Ratio speed would be unavailable...\n");
     } else {
-        ratio = (float) ((count2 - count1) / count1);
+        ratio = (float) ((count2.load() - count1.load()) / count1.load());
         Log("Approximative speed ratio of freewheel mode = %f : 1.00\n", ratio);
     }
 
@@ -1057,21 +1059,21 @@ int main (int argc, char *argv[])
 
     float factor = 0.5f;
     old_buffer_size = jack_get_buffer_size(client1);
-    Log("Testing BufferSize change & Callback...\n--> Current buffer size : %d.\n", old_buffer_size);
+    Log("Testing BufferSize change & Callback...\n--> Current buffer size : %d.\n", old_buffer_size.load());
     linebuf = linecount;
-    if (jack_set_buffer_size(client1, (jack_nframes_t)(old_buffer_size * factor)) < 0) {
+    if (jack_set_buffer_size(client1, (jack_nframes_t)(old_buffer_size.load() * factor)) < 0) {
         printf("!!! ERROR !!! jack_set_buffer_size fails !\n");
     }
     jack_sleep(1 * 1000);
     cur_buffer_size = jack_get_buffer_size(client1);
-    if (abs((old_buffer_size * factor) - cur_buffer_size) > 5) {  // Tolerance needed for dummy driver...
+    if (abs((old_buffer_size.load() * factor) - cur_buffer_size.load()) > 5) {  // Tolerance needed for dummy driver...
         printf("!!! ERROR !!! Buffer size has not been changed !\n");
         printf("!!! Maybe jack was compiled without the '--enable-resize' flag...\n");
     } else {
         Log("jack_set_buffer_size() command successfully applied...\n");
     }
     jack_sleep(3 * 1000);
-    jack_set_buffer_size(client1, old_buffer_size);
+    jack_set_buffer_size(client1, old_buffer_size.load());
     cur_buffer_size = jack_get_buffer_size(client1);
 
     /**
@@ -1650,10 +1652,10 @@ int main (int argc, char *argv[])
             printf("!!! ERROR !!! data transmission seems not to be valid !\n");
             printf("Links topology : (emitt) client2.out2 ----> client1.in1--(tie)--client1.out1----->client2.in2 (recive)\n");
             printf("  port_name    : Port_adress \n");
-            printf("  output_port1 : %px\n", jack_port_get_buffer(output_port1, cur_buffer_size));
-            printf("  input_port2  : %px\n", jack_port_get_buffer(input_port2, cur_buffer_size));
-            printf("  output_port2 : %px\n", jack_port_get_buffer(output_port2, cur_buffer_size));
-            printf("  input_port1  : %px\n", jack_port_get_buffer(input_port1, cur_buffer_size));
+            printf("  output_port1 : %px\n", jack_port_get_buffer(output_port1, cur_buffer_size.load()));
+            printf("  input_port2  : %px\n", jack_port_get_buffer(input_port2, cur_buffer_size.load()));
+            printf("  output_port2 : %px\n", jack_port_get_buffer(output_port2, cur_buffer_size.load()));
+            printf("  input_port1  : %px\n", jack_port_get_buffer(input_port1, cur_buffer_size.load()));
         }
 
         jack_port_untie(output_port1);
@@ -1904,7 +1906,7 @@ int main (int argc, char *argv[])
 
         } while (ts != JackTransportRolling);
 
-        Log("Sync callback have been called %i times.\n", sync_called);
+        Log("Sync callback have been called %i times.\n", sync_called.load());
         jack_transport_stop(client1);
 
         // Wait until stopped
@@ -1944,7 +1946,7 @@ int main (int argc, char *argv[])
             Log("!!! ERROR !!! starting a slow-sync client does not work correctly\n");
         }
 
-        Log("Sync callback have been called %i times.\n", sync_called);
+        Log("Sync callback have been called %i times.\n", sync_called.load());
         display_transport_state();
 
         // Test jack_transport_locate while rolling
@@ -2114,7 +2116,7 @@ int main (int argc, char *argv[])
     if (xrun == 0) {
         Log("No Xrun have been detected during this test... cool !\n");
     } else {
-        printf("%i Xrun have been detected during this session (seen callback messages to see where are the problems).\n", xrun);
+        printf("%i Xrun have been detected during this session (seen callback messages to see where are the problems).\n", xrun.load());
     }
     free(framecollect);
     free(signal1);
@@ -2122,7 +2124,7 @@ int main (int argc, char *argv[])
     Log("Exiting jack_test...\n");
     fclose(file);
     printf("*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*--*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n");
-    sprintf (filename, "framegraph-%i.gnu", cur_buffer_size);
+    sprintf (filename, "framegraph-%i.gnu", cur_buffer_size.load());
     file = fopen(filename, "w");
     if (file == NULL) {
         fprintf(stderr, "Error while opening file");
@@ -2130,23 +2132,23 @@ int main (int argc, char *argv[])
     }
     fprintf(file, "reset\n");
     fprintf(file, "set terminal png transparent nocrop enhanced\n");
-    fprintf(file, "set output 'framegraph-%i-1.png'\n", cur_buffer_size);
+    fprintf(file, "set output 'framegraph-%i-1.png'\n", cur_buffer_size.load());
     fprintf(file, "set title \"Frame time evolution during jack_test run\"\n");
-    fprintf(file, "set yrange [ %i.00000 : %i.0000 ] noreverse nowriteback\n", cur_buffer_size - (cur_buffer_size / 8), cur_buffer_size + (cur_buffer_size / 8));
+    fprintf(file, "set yrange [ %i.00000 : %i.0000 ] noreverse nowriteback\n", cur_buffer_size.load() - (cur_buffer_size.load() / 8), cur_buffer_size.load() + (cur_buffer_size.load() / 8));
     fprintf(file, "set xrange [ 0.00000 : %i.0000 ] noreverse nowriteback\n" , linecount - 1);
     fprintf(file, "set ylabel \"Frametime evolution (d(ft)/dt)\"\n");
     fprintf(file, "set xlabel \"FrameTime\"\n");
     fprintf(file, "set label \"| buf.siz:%i | fr.wl:%i | rg.ports:%i | 2nd.client:%i | trsprt:%i |\" at graph 0.01, 0.04\n", linebuf, linefw, lineports, linecl2, linetransport);
-    fprintf(file, "plot 'framefile-%i.dat' using 2 with impulses title \"Xruns\",'framefile-%i.dat' using 1 with line title \"Sampletime variation at %i\"\n", cur_buffer_size, cur_buffer_size, cur_buffer_size);
+    fprintf(file, "plot 'framefile-%i.dat' using 2 with impulses title \"Xruns\",'framefile-%i.dat' using 1 with line title \"Sampletime variation at %i\"\n", cur_buffer_size.load(), cur_buffer_size.load(), cur_buffer_size.load());
 
-    fprintf(file, "set output 'framegraph-%i-2.png'\n", cur_buffer_size);
+    fprintf(file, "set output 'framegraph-%i-2.png'\n", cur_buffer_size.load());
     fprintf(file, "set title \"Frame time evolution during jack_test run\"\n");
     fprintf(file, "set yrange [ %i.00000 : %i.0000 ] noreverse nowriteback\n", (int) (cur_buffer_size / 2), (int) (2*cur_buffer_size + (cur_buffer_size / 8)));
     fprintf(file, "set xrange [ 0.00000 : %i.0000 ] noreverse nowriteback\n" , linecount - 1);
     fprintf(file, "set ylabel \"Frametime evolution (d(ft)/dt)\"\n");
     fprintf(file, "set xlabel \"FrameTime\"\n");
     fprintf(file, "set label \"| buf.siz:%i | fr.wl:%i | rg.ports:%i | 2nd.client:%i | trsprt:%i |\" at graph 0.01, 0.04\n", linebuf, linefw, lineports, linecl2, linetransport);
-    fprintf(file, "plot 'framefile-%i.dat' using 2 with impulses title \"Xruns\",'framefile-%i.dat' using 1 with line title \"Sampletime variation at %i\"\n", cur_buffer_size, cur_buffer_size, cur_buffer_size);
+    fprintf(file, "plot 'framefile-%i.dat' using 2 with impulses title \"Xruns\",'framefile-%i.dat' using 1 with line title \"Sampletime variation at %i\"\n", cur_buffer_size.load(), cur_buffer_size.load(), cur_buffer_size.load());
     fclose(file);
     return 0;
 }
